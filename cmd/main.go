@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"scheduler/internal/config"
-	"scheduler/internal/storage/postgres"
+	"scheduler/internal/storage/sqlite"
 )
 
 const (
@@ -23,12 +23,14 @@ func main() {
 	log.Info("starting project", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 	// TODO: init storage: postgreSQL
-	storage, err := postgres.New()
+	storage, err := sqlite.New("./storage.db")
 	if err != nil {
 		log.Error("failed to init storage", err)
 	}
-	os.Exit(1)
-	_ = storage
+	err = storage.AddUser("vitalik@gmail.com")
+	if err != nil {
+		log.Error("failed to add user to storage", err)
+	}
 	// TODO: init router: chi, chi render
 	// TODO: run server
 }
