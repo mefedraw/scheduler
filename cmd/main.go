@@ -3,6 +3,7 @@
 import (
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"os"
 	"scheduler/internal/config"
 	"scheduler/internal/storage/sqlite"
@@ -27,10 +28,13 @@ func main() {
 	if err != nil {
 		log.Error("failed to init storage", err)
 	}
-	err = storage.AddUser("vitalik@gmail.com")
+	randomNum := rand.Int() % 1000
+	mail := fmt.Sprintf("vitalik%d@gmail.com", randomNum)
+	err = storage.AddUser(mail)
 	if err != nil {
 		log.Error("failed to add user to storage", err)
 	}
+	err = storage.AddTask(mail, "university", "OS lab1")
 	// TODO: init router: chi, chi render
 	// TODO: run server
 }
