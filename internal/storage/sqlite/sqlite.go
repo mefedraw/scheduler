@@ -2,6 +2,7 @@
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	_ "modernc.org/sqlite"
@@ -66,6 +67,22 @@ func (s *Storage) AddUser(mail string) error {
 	}
 
 	return nil
+}
+
+func (s *Storage) UserExists(mail string) (string, error) {
+	const op = "storage.sqlite.userExists"
+	stmt, err := s.db.Prepare("SELECT mail FROM users WHERE mail = ?")
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+	row := stmt.QueryRow(mail)
+	var email string
+	err = row.Scan(&email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+
+	return email, nil
 }
 
 func (s *Storage) AddTask(mail, title, description string) error {
