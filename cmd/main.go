@@ -2,13 +2,14 @@
 
 import (
 	"fmt"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log/slog"
-	"math/rand"
 	"net/http"
 	"os"
 	"scheduler/internal/config"
+	"scheduler/internal/http-server/handlers/task/add"
 	"scheduler/internal/http-server/handlers/user/save"
 	"scheduler/internal/storage/sqlite"
 )
@@ -27,18 +28,18 @@ func main() {
 	log := setupLogger(cfg.Env)
 	log.Info("starting project", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
-	// TODO: init storage: postgreSQL
-	storage, err := sqlite.New("./storage.db")
+	// TODO: init storage: sqlite
+	storage, err := sqlite.New("./SqliteStorage.db")
 	if err != nil {
 		log.Error("failed to init storage", err)
 	}
-	randomNum := rand.Int() % 1000
-	mail := fmt.Sprintf("vitalik%d@gmail.com", randomNum)
-	err = storage.AddUser(mail)
+	pass := gofakeit.Password(true, true, true, false, false, 10)
+	mail := gofakeit.Email()
+	err = storage.AddUser(mail, pass)
 	if err != nil {
 		log.Error("failed to add user to storage", err)
 	}
-	err = storage.AddTask(mail, "university", "OS lab1")
+	err = storage.AddTask(gofakeit.CelebritySport(), gofakeit.URL())
 	if err != nil {
 		log.Error("failed to add task to storage", err)
 	}
@@ -51,6 +52,7 @@ func main() {
 	router.Use(middleware.URLFormat)
 
 	router.Post("/user", save.New(log, storage))
+	router.Post("/task", add.New(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 	// TODO: run server

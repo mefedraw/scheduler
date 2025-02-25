@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
 	"time"
 )
@@ -23,6 +24,7 @@ func New(storagePath string) (*Storage, error) {
 	stmt, err := db.Prepare(
 		`CREATE TABLE IF NOT EXISTS users (
     				mail TEXT PRIMARY KEY NOT NULL,
+    				password TEXT NOT NULL,
    					registration_date DATE NOT NULL);
 				CREATE INDEX IF NOT EXISTS idx_mail ON users(mail);
 	`)
@@ -37,9 +39,8 @@ func New(storagePath string) (*Storage, error) {
 	stmt, err = db.Prepare(
 		`CREATE TABLE IF NOT EXISTS tasks (
     				task_id uid PRIMARY KEY,
-    				mail TEXT NOT NULL,
     				title TEXT NOT NULL,
-    				description TEXT,
+    				url TEXT,
    					task_add_date DATE NOT NULL);
 				CREATE INDEX IF NOT EXISTS idx_task_id ON tasks(task_id);
 	`)
@@ -51,21 +52,44 @@ func New(storagePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) AddUser(mail string) error {
+func (s *Storage) AddUser(mail, password string) error {
 	const op = "storage.sqlite.addUser"
 	registrationDate := time.Now()
-	stmt, err := s.db.Prepare("INSERT INTO users(mail, registration_date) VALUES(?, ?)")
+	stmt, err := s.db.Prepare("INSERT INTO users(mail, password, registration_date) VALUES(?, ?, ?)")
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = stmt.Exec(mail, registrationDate)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	_, err = stmt.Exec(mail, hashedPassword, registrationDate)
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
+	return nil
+}
+
+func (s *Storage) CheckPassword(mail, password string) error {
+	const op = "storage.sqlite.checkPassword"
+	stmt, err := s.db.Prepare("SELECT password FROM users WHERE mail=?")
+
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	row := stmt.QueryRow(mail)
+	var pass string
+	err = row.Scan(&pass)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(pass), []byte(password))
+	if err != nil {
+		return fmt.Errorf("invalid password! %s: %w", op, err)
+	}
 	return nil
 }
 
@@ -85,9 +109,9 @@ func (s *Storage) UserExists(mail string) (string, error) {
 	return email, nil
 }
 
-func (s *Storage) AddTask(mail, title, description string) error {
+func (s *Storage) AddTask(title, url string) error {
 	const op = "storage.sqlite.addTask"
-	stmt, err := s.db.Prepare("INSERT INTO tasks(task_id, mail, title, description, task_add_date) VALUES(?, ?, ?, ?, ?)")
+	stmt, err := s.db.Prepare("INSERT INTO tasks(task_id, title, url, task_add_date) VALUES(?, ?, ?, ?)")
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("%s: %w", op, err)
@@ -95,7 +119,7 @@ func (s *Storage) AddTask(mail, title, description string) error {
 
 	taskDate := time.Now()
 	taskId := uuid.New()
-	_, err = stmt.Exec(taskId, mail, title, description, taskDate)
+	_, err = stmt.Exec(taskId, title, url, taskDate)
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("%s: %w", op, err)

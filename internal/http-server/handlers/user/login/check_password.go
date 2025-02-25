@@ -1,4 +1,4 @@
-﻿package save
+﻿package login
 
 import (
 	"fmt"
@@ -10,8 +10,8 @@ import (
 )
 
 type Request struct {
-	Mail     string `json:"mail" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Title string `json:"title" validate:"required"`
+	URl   string `json:"url" validate:"required,url"`
 }
 
 type Response struct {
@@ -19,13 +19,13 @@ type Response struct {
 	Error  string `json:"error,omitempty"`
 }
 
-type UserSaver interface {
-	AddUser(mail, password string) error
+type TaskAdder interface {
+	AddTask(title, URL string) error
 }
 
-func New(log *slog.Logger, userSaver UserSaver) http.HandlerFunc {
+func New(log *slog.Logger, taskAdder TaskAdder) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.user.save.New"
+		const op = "handlers.task.add.New"
 		log = log.With(
 			slog.String("op", op),
 			slog.String("request_id", middleware.GetReqID(r.Context())))
@@ -50,14 +50,14 @@ func New(log *slog.Logger, userSaver UserSaver) http.HandlerFunc {
 			return
 		}
 
-		err = userSaver.AddUser(req.Mail, req.Password)
+		err = taskAdder.AddTask(req.Title, req.URl)
 		if err != nil {
-			log.Error("failed to add user", slog.String("error", err.Error()))
-			render.JSON(w, r, fmt.Errorf("failed to add user: %w", err))
+			log.Error("failed to add task", slog.String("error", err.Error()))
+			render.JSON(w, r, fmt.Errorf("failed to add task: %w", err))
 			return
 		}
 
-		log.Info("user added", slog.String("mail", req.Mail))
+		log.Info("task added", slog.String("title", req.Title))
 
 		render.JSON(w, r, Response{
 			Status: "ok",
