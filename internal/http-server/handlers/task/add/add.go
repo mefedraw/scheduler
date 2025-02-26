@@ -19,11 +19,11 @@ type Response struct {
 	Error  string `json:"error,omitempty"`
 }
 
-type TaskAdder interface {
+type TaskService interface {
 	AddTask(title, URL string) error
 }
 
-func New(log *slog.Logger, taskAdder TaskAdder) http.HandlerFunc {
+func New(log *slog.Logger, taskService TaskService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.task.add.New"
 		log = log.With(
@@ -50,7 +50,7 @@ func New(log *slog.Logger, taskAdder TaskAdder) http.HandlerFunc {
 			return
 		}
 
-		err = taskAdder.AddTask(req.Title, req.URl)
+		err = taskService.AddTask(req.Title, req.URl)
 		if err != nil {
 			log.Error("failed to add task", slog.String("error", err.Error()))
 			render.JSON(w, r, fmt.Errorf("failed to add task: %w", err))

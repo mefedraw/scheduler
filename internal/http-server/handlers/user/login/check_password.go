@@ -7,11 +7,12 @@ import (
 	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"net/http"
+	"scheduler/internal/service/user"
 )
 
 type Request struct {
-	Title string `json:"title" validate:"required"`
-	URl   string `json:"url" validate:"required,url"`
+	Mail     string `json:"mail" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type Response struct {
@@ -19,11 +20,7 @@ type Response struct {
 	Error  string `json:"error,omitempty"`
 }
 
-type TaskAdder interface {
-	AddTask(title, URL string) error
-}
-
-func New(log *slog.Logger, taskAdder TaskAdder) http.HandlerFunc {
+func New(log *slog.Logger, passwordChecker *user.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.task.add.New"
 		log = log.With(
@@ -50,14 +47,14 @@ func New(log *slog.Logger, taskAdder TaskAdder) http.HandlerFunc {
 			return
 		}
 
-		err = taskAdder.AddTask(req.Title, req.URl)
+		err = passwordChecker.CheckPassword(req.Mail, req.Password)
 		if err != nil {
-			log.Error("failed to add task", slog.String("error", err.Error()))
-			render.JSON(w, r, fmt.Errorf("failed to add task: %w", err))
+			log.Error("invalid password", slog.String("error", err.Error()))
+			render.JSON(w, r, fmt.Errorf("failed to auth user: %w", err))
 			return
 		}
 
-		log.Info("task added", slog.String("title", req.Title))
+		log.Info("authorized", slog.String("title", req.Mail))
 
 		render.JSON(w, r, Response{
 			Status: "ok",

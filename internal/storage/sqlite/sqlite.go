@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
 	"time"
 )
@@ -52,17 +51,15 @@ func New(storagePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) AddUser(mail, password string) error {
+func (s *Storage) AddUser(mail, password string, registrationDate time.Time) error {
 	const op = "storage.sqlite.addUser"
-	registrationDate := time.Now()
 	stmt, err := s.db.Prepare("INSERT INTO users(mail, password, registration_date) VALUES(?, ?, ?)")
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	_, err = stmt.Exec(mail, hashedPassword, registrationDate)
+	_, err = stmt.Exec(mail, password, registrationDate)
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("%s: %w", op, err)
@@ -71,12 +68,12 @@ func (s *Storage) AddUser(mail, password string) error {
 	return nil
 }
 
-func (s *Storage) CheckPassword(mail, password string) error {
+func (s *Storage) GetPassword(mail string) (string, error) {
 	const op = "storage.sqlite.checkPassword"
 	stmt, err := s.db.Prepare("SELECT password FROM users WHERE mail=?")
 
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	row := stmt.QueryRow(mail)
@@ -84,13 +81,10 @@ func (s *Storage) CheckPassword(mail, password string) error {
 	err = row.Scan(&pass)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(pass), []byte(password))
-	if err != nil {
-		return fmt.Errorf("invalid password! %s: %w", op, err)
-	}
-	return nil
+
+	return pass, nil
 }
 
 func (s *Storage) UserExists(mail string) (string, error) {
@@ -109,7 +103,7 @@ func (s *Storage) UserExists(mail string) (string, error) {
 	return email, nil
 }
 
-func (s *Storage) AddTask(title, url string) error {
+func (s *Storage) AddTask(taskId uuid.UUID, title, url string, taskAddDate time.Time) error {
 	const op = "storage.sqlite.addTask"
 	stmt, err := s.db.Prepare("INSERT INTO tasks(task_id, title, url, task_add_date) VALUES(?, ?, ?, ?)")
 	if err != nil {
@@ -117,9 +111,7 @@ func (s *Storage) AddTask(title, url string) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	taskDate := time.Now()
-	taskId := uuid.New()
-	_, err = stmt.Exec(taskId, title, url, taskDate)
+	_, err = stmt.Exec(taskId, title, url, taskAddDate)
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("%s: %w", op, err)

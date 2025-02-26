@@ -2,7 +2,6 @@
 
 import (
 	"fmt"
-	"github.com/brianvoe/gofakeit/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log/slog"
@@ -10,7 +9,10 @@ import (
 	"os"
 	"scheduler/internal/config"
 	"scheduler/internal/http-server/handlers/task/add"
+	"scheduler/internal/http-server/handlers/user/login"
 	"scheduler/internal/http-server/handlers/user/save"
+	"scheduler/internal/service/task"
+	"scheduler/internal/service/user"
 	"scheduler/internal/storage/sqlite"
 )
 
@@ -33,16 +35,19 @@ func main() {
 	if err != nil {
 		log.Error("failed to init storage", err)
 	}
-	pass := gofakeit.Password(true, true, true, false, false, 10)
-	mail := gofakeit.Email()
-	err = storage.AddUser(mail, pass)
-	if err != nil {
-		log.Error("failed to add user to storage", err)
-	}
-	err = storage.AddTask(gofakeit.CelebritySport(), gofakeit.URL())
-	if err != nil {
-		log.Error("failed to add task to storage", err)
-	}
+	//pass := gofakeit.Password(true, true, true, false, false, 10)
+	//mail := gofakeit.Email()
+	//err = storage.AddUser(mail, pass)
+	//if err != nil {
+	//	log.Error("failed to add user to storage", err)
+	//}
+	//err = storage.AddTask(gofakeit.CelebritySport(), gofakeit.URL())
+	//if err != nil {
+	//	log.Error("failed to add task to storage", err)
+	//}
+	userService := user.NewUserService(storage)
+	taskService := task.NewTaskService(storage)
+	userService.CreateUser("vitalik228@gmail.com", "vitalik228")
 	// TODO: init router: chi, chi render
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
@@ -51,8 +56,9 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/user", save.New(log, storage))
-	router.Post("/task", add.New(log, storage))
+	router.Post("/user", save.New(log, userService))
+	router.Post("/task", add.New(log, taskService))
+	router.Get("/login", login.New(log, userService))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 	// TODO: run server

@@ -19,11 +19,12 @@ type Response struct {
 	Error  string `json:"error,omitempty"`
 }
 
-type UserSaver interface {
-	AddUser(mail, password string) error
+type UserService interface {
+	CheckPassword(mail, password string) error
+	CreateUser(mail, password string) error
 }
 
-func New(log *slog.Logger, userSaver UserSaver) http.HandlerFunc {
+func New(log *slog.Logger, userService UserService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.user.save.New"
 		log = log.With(
@@ -50,7 +51,7 @@ func New(log *slog.Logger, userSaver UserSaver) http.HandlerFunc {
 			return
 		}
 
-		err = userSaver.AddUser(req.Mail, req.Password)
+		err = userService.CreateUser(req.Mail, req.Password)
 		if err != nil {
 			log.Error("failed to add user", slog.String("error", err.Error()))
 			render.JSON(w, r, fmt.Errorf("failed to add user: %w", err))
