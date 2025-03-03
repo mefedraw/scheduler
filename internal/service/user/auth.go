@@ -26,12 +26,12 @@ func NewUserService(storage storage) *Service {
 func (u *Service) CheckPassword(mail, password string) error {
 	pass, err := u.storage.GetPassword(mail)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w:%w", ErrStorageFail, err)
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(pass), []byte(password))
 	if err != nil {
 		slog.Error("password is incorrect", "err", err, "mail", mail, "password", password)
-		return fmt.Errorf("service error %w", err)
+		return fmt.Errorf("%w:%w", ErrWrongPassword, err)
 	}
 	return nil
 }

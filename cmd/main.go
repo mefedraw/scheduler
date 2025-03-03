@@ -47,7 +47,7 @@ func main() {
 	//}
 	userService := user.NewUserService(storage)
 	taskService := task.NewTaskService(storage)
-	userService.CreateUser("vitalik228@gmail.com", "vitalik228")
+	//userService.CreateUser("vitalik228@gmail.com", "vitalik228")
 	// TODO: init router: chi, chi render
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)

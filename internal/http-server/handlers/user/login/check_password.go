@@ -1,6 +1,7 @@
 ﻿package login
 
 import (
+	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
@@ -49,8 +50,19 @@ func New(log *slog.Logger, passwordChecker *user.Service) http.HandlerFunc {
 
 		err = passwordChecker.CheckPassword(req.Mail, req.Password)
 		if err != nil {
-			log.Error("invalid password", slog.String("error", err.Error()))
-			render.JSON(w, r, fmt.Errorf("failed to auth user: %w", err))
+			if errors.Is(err, user.ErrWrongPassword) {
+				w.WriteHeader(http.StatusUnauthorized)
+				render.JSON(w, r, Response{
+					Status: "error",
+					Error:  "wrong password",
+				})
+				return
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			render.JSON(w, r, Response{
+				Status: "error",
+				Error:  "Internal Server Error",
+			})
 			return
 		}
 
