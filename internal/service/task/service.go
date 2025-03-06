@@ -7,7 +7,7 @@ import (
 )
 
 type storage interface {
-	AddTask(taskId uuid.UUID, title, url string, taskAddDate time.Time) error
+	AddTask(taskId uuid.UUID, creatorId uint, title, url string, creationTimestamp time.Time) error
 }
 
 type TaskService struct {
@@ -18,10 +18,10 @@ func NewTaskService(storage storage) *TaskService {
 	return &TaskService{storage}
 }
 
-func (s *TaskService) AddTask(title, url string) error {
+func (s *TaskService) AddTask(creatorId uint, title, url string) error {
 	taskId := uuid.New()
-	taskAddDate := time.Now()
-	err := s.storage.AddTask(taskId, title, url, taskAddDate)
+	creationTimestamp := time.Now()
+	err := s.storage.AddTask(taskId, creatorId, title, url, creationTimestamp)
 	if err != nil {
 		slog.Error("Failed to add task to storage", "err", err, "title", title, "url", url)
 		return err

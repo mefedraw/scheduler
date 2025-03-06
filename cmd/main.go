@@ -2,8 +2,10 @@
 
 import (
 	"fmt"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,6 +16,7 @@ import (
 	"scheduler/internal/service/task"
 	"scheduler/internal/service/user"
 	"scheduler/internal/storage/sqlite"
+	"time"
 )
 
 const (
@@ -31,20 +34,20 @@ func main() {
 	log.Info("starting project", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 	// TODO: init storage: sqlite
-	storage, err := sqlite.New("./SqliteStorage.db")
+	storage, err := sqlite.New("./SqliteStorageA.db")
 	if err != nil {
 		log.Error("failed to init storage", err)
 	}
-	//pass := gofakeit.Password(true, true, true, false, false, 10)
-	//mail := gofakeit.Email()
-	//err = storage.AddUser(mail, pass)
-	//if err != nil {
-	//	log.Error("failed to add user to storage", err)
-	//}
-	//err = storage.AddTask(gofakeit.CelebritySport(), gofakeit.URL())
-	//if err != nil {
-	//	log.Error("failed to add task to storage", err)
-	//}
+	pass := gofakeit.Password(true, true, true, false, false, 10)
+	mail := gofakeit.Email()
+	_, err = storage.AddUser(mail, pass, time.Now())
+	if err != nil {
+		log.Error("failed to add user to storage", err)
+	}
+	err = storage.AddTask(uuid.New(), uint(gofakeit.Uint32()), gofakeit.CelebritySport(), gofakeit.URL(), time.Now())
+	if err != nil {
+		log.Error("failed to add task to storage", err)
+	}
 	userService := user.NewUserService(storage)
 	taskService := task.NewTaskService(storage)
 	//userService.CreateUser("vitalik228@gmail.com", "vitalik228")

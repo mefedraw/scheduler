@@ -11,8 +11,8 @@ import (
 type storage interface {
 	GetPassword(mail string) (string, error)
 	UserExists(mail string) (string, error)
-	AddUser(mail, password string, registrationDate time.Time) error
-	AddTask(taskId uuid.UUID, title, url string, taskAddDate time.Time) error
+	AddUser(mail, password string, registrationDate time.Time) (int, error)
+	AddTask(taskId uuid.UUID, creatorId uint, title, url string, creationTimestamp time.Time) error
 }
 
 type Service struct {
@@ -41,7 +41,7 @@ func (u *Service) CreateUser(mail, password string) error {
 	if userExists == "" {
 		regDate := time.Now()
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		err = u.storage.AddUser(mail, string(hashedPassword), regDate)
+		_, err = u.storage.AddUser(mail, string(hashedPassword), regDate)
 		if err != nil {
 			slog.Error("error creating new user", "err", err, "mail", mail, "password", password)
 			return err

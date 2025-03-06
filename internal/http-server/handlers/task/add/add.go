@@ -7,11 +7,13 @@ import (
 	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"net/http"
+	"scheduler/internal/service/task"
 )
 
 type Request struct {
-	Title string `json:"title" validate:"required"`
-	URl   string `json:"url" validate:"required,url"`
+	UserId uint   `json:"user_id" validate:"required"`
+	Title  string `json:"title" validate:"required"`
+	URl    string `json:"url" validate:"required,url"`
 }
 
 type Response struct {
@@ -23,7 +25,7 @@ type TaskService interface {
 	AddTask(title, URL string) error
 }
 
-func New(log *slog.Logger, taskService TaskService) http.HandlerFunc {
+func New(log *slog.Logger, taskService *task.TaskService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.task.add.New"
 		log = log.With(
@@ -50,7 +52,7 @@ func New(log *slog.Logger, taskService TaskService) http.HandlerFunc {
 			return
 		}
 
-		err = taskService.AddTask(req.Title, req.URl)
+		err = taskService.AddTask(req.UserId, req.Title, req.URl)
 		if err != nil {
 			log.Error("failed to add task", slog.String("error", err.Error()))
 			render.JSON(w, r, fmt.Errorf("failed to add task: %w", err))
